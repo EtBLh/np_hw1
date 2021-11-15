@@ -74,13 +74,12 @@ int main(int argc , char *argv[])   {
      
         //add master socket to set  
         FD_SET(master_socket, &readfds);   
-        max_sd = master_socket;   
+        max_sd = master_socket;
              
         //add child sockets to set  
-        for ( i = 0 ; i < max_clients ; i++)   
-        {   
-            //socket descriptor  
-            sd = client_socket[i];   
+        for ( i = 0 ; i < max_clients ; i++) {
+            //socket descriptor
+            sd = client_socket[i];
                  
             //if valid socket descriptor then add to read list  
             if(sd > 0)   
@@ -92,49 +91,40 @@ int main(int argc , char *argv[])   {
         }   
      
         //wait for an activity on one of the sockets , timeout is NULL ,  
-        //so wait indefinitely  
+        //so wait indefinitely
         activity = select( max_sd + 1 , &readfds , NULL , NULL , NULL);   
        
-        if ((activity < 0) && (errno!=EINTR))   
-        {   
+        if ((activity < 0) && (errno!=EINTR)){   
             printf("select error");   
         }   
              
         //If something happened on the master socket ,  
         //then its an incoming connection  
         if (FD_ISSET(master_socket, &readfds)){
-
-            if ((new_socket = accept(master_socket,  
-                    (struct sockaddr *)&address, (socklen_t*)&addrlen))<0)   
-            {   
-                perror("accept");   
+            if ((new_socket = accept(master_socket, (struct sockaddr *)&address, (socklen_t*)&addrlen))<0) {
+                perror("accept");
                 exit(EXIT_FAILURE);   
-            }   
+            }
              
             //inform user of socket number - used in send and receive commands  
-            printf("New connection , socket fd is %d , ip is : %s , port : %d\n" , new_socket , inet_ntoa(address.sin_addr) , ntohs 
-                  (address.sin_port));   
-            
+            printf("New connection , socket fd is %d , ip is : %s , port : %d\n" , new_socket , inet_ntoa(address.sin_addr) , ntohs(address.sin_port));   
 
             memset(message,0,sizeof(message[0])*1025);
             //a message
             sprintf(message,"%s %s:%d\n", "[Server] Hello, anonymous! From:", inet_ntoa(address.sin_addr) , ntohs (address.sin_port));
             
-             //puts(message);
+            //puts(message);
             //send new connection greeting message
-            if( send(new_socket, message, strlen(message), 0) != strlen(message) )   
-            {   
+            if( send(new_socket, message, strlen(message), 0) != strlen(message)){
                 perror("send");   
             }   
                  
             puts("Welcome message sent successfully");   
 
             //add new socket to array of sockets  
-            for (i = 0; i < max_clients; i++)   
-            {   
-                //if position is empty  
-                if( client_socket[i] == 0 )   
-                {   
+            for (i = 0; i < max_clients; i++) {
+                //if position is empty
+                if( client_socket[i] == 0 ){
                     client_socket[i] = new_socket;   
                     printf("Adding to list of sockets as %d\n" , i);
 
@@ -153,8 +143,8 @@ int main(int argc , char *argv[])   {
             for (int i = 0;i < max_clients;i++){
                 if (client_socket[i]){
                     memset(message,0,1025*sizeof(message[0]));
-                    if (users[i].port == ntohs(address.sin_port) && !strcmp(inet_ntoa(address.sin_addr), users[i].addr) ){
-                    }else{
+                    if (users[i].port == ntohs(address.sin_port) && !strcmp(inet_ntoa(address.sin_addr), users[i].addr)){
+                    } else {
                         sprintf(message,"[Server] Someone is coming!\n");
                         send(client_socket[i],message,strlen(message),0);
                     }
@@ -164,10 +154,10 @@ int main(int argc , char *argv[])   {
         }   
 
         //else its some IO operation on some other socket 
-        for (i = 0; i < max_clients; i++){   
-            sd = client_socket[i];   
+        for (i = 0; i < max_clients; i++){
+            sd = client_socket[i];
                  
-            if (FD_ISSET( sd , &readfds)){   
+            if (FD_ISSET( sd , &readfds)){
                 //Check if it was for closing , and also read the  
                 //incoming message  
                 if ((valread = read( sd , buffer, 1025)) == 0){   
@@ -204,13 +194,12 @@ int main(int argc , char *argv[])   {
                     for (int j = 0;j < 4;j++)
                         str[j] = buffer[j];
                     
-                    //printf("size of buffer: %d %d", strlen(buffer), strlen(str) );
-                    if (!strcmp(str,"who\n")){
+                    if (!strncmp(str,"who",3)){
                         puts(str);
 
-                        for (int z = 0;z < max_clients;z++){
+                        for (int z = 0; z < max_clients; z++){
                             if (client_socket[z]){
-                                memset(message,0,sizeof(message[0])*1025);
+                                memset(message, 0, sizeof(message[0])*1025);
                                 sprintf(message,"[Server] %s %s:%d",users[z].name,users[z].addr,users[z].port);
                                 if ( z == i ){
                                     sprintf(message,"%s ->me",message);
@@ -223,6 +212,7 @@ int main(int argc , char *argv[])   {
                         puts(str);
                         memset(message,0,1025*sizeof(message[0]));
                         char n[15] = { 0 };
+
                         int check = 0;
                         if (strlen(buffer) > 6){
                             for (int j = 5;buffer[j] != '\n';j++){
@@ -233,9 +223,7 @@ int main(int argc , char *argv[])   {
                         }
 
                         if (check || (strlen(n)<2) || (strlen(n)>12) ){
-                            
                             sprintf(message,"[Server] ERROR: Username can only consists of 2~12 English letters.\n");
-
                         }else{
                             if (!strcmp(n,"anonymous")){
                                 sprintf(message,"[Server] ERROR: Username cannot be anonymous.\n");
@@ -253,6 +241,8 @@ int main(int argc , char *argv[])   {
                                     //success
                                     send(sd,message,strlen(message),0);
                                     memset(message,0,1025*sizeof(message[0]));
+
+                                    //broadcast
                                     sprintf(message,"[Server] %s is now known as %s.\n",users[i].name,n);
                                     for (int z = 0;z < max_clients;z++){
                                         if (i != z){
@@ -266,6 +256,8 @@ int main(int argc , char *argv[])   {
                                 
                             }
                         }
+
+                        //send to sender
                         send(sd,message,strlen(message),0);
 
                     }else if (!strcmp(str,"tell")){
@@ -284,24 +276,22 @@ int main(int argc , char *argv[])   {
                         for (int z = 0;buffer[j] != '\n';j++,z++){
                             msg[z] = buffer[j];
                         }
-                        int check = -1;
+                        int target_idx = -1;
                         if ( !strcmp(users[i].name,"anonymous") ){
-                            if (!strcmp("anonymous", target) ){
+                            if (!strcmp("anonymous", target) )
                                 sprintf(message,"[Server] ERROR: You are anonymous.\n[Server] ERROR: The client to which you sent is anonymous.\n");
-                            } else
-                            sprintf(message,"[Server] ERROR: You are anonymous.\n");
+                            else
+                                sprintf(message,"[Server] ERROR: You are anonymous.\n");
                         }else{
                             if ( !strcmp("anonymous",target) ){
                                 sprintf(message,"[Server] ERROR: The client to which you sent is anonymous.\n");
                             }else{
-                                
                                 for (int z = 0;z < max_clients;z++){
                                     if ( !strcmp(users[z].name,target) ){
-                                        check = z;
+                                        target_idx = z;
                                     }
-                                    
                                 }
-                                if (check >= 0){
+                                if (target_idx >= 0){
                                     sprintf(message,"[Server] SUCCESS: Your message has been sent.\n");
                                 }else{
                                     sprintf(message,"[Server] ERROR: The receiver doesn't exist.\n");  
@@ -312,7 +302,7 @@ int main(int argc , char *argv[])   {
                         send(sd , message , strlen(message) , 0 );
                         memset(message,0,1025*sizeof(message[0]));
                         sprintf(message,"[Server] %s tell you %s\n",users[i].name,msg);
-                        send(client_socket[check],message,strlen(message),0);
+                        send(client_socket[target_idx],message,strlen(message),0);
                             
                     }else if (!strcmp(str,"yell")){
                         puts(str);
@@ -340,9 +330,6 @@ int main(int argc , char *argv[])   {
                         //puts(message);
                         send(sd , message , strlen(message) , 0 );
                     }
-                    
-                    //send(sd , buffer , strlen(buffer) , 0 );  
-                    
                 }
                 memset(buffer,0,sizeof(buffer[0])*1025);
             }   

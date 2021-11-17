@@ -58,6 +58,16 @@ int main(int argc, char *argv[])
 				return 0;
 			}
 
+			if (!strncmp(input,"timed_exit",10)){
+				int seconds;
+				char nothing[11];
+				sscanf(input, "%s %d", nothing, &seconds);
+				printf("%d", seconds);
+				sleep(seconds*1000);
+				kill(pid,1);
+				return 0;
+			}
+
 			send(sock, input, strlen(input), 0);
 		}
 	}
